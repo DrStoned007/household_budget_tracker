@@ -100,6 +100,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     allTransactions: provider.transactions,
                     month: _selectedMonth,
                     currencySymbol: currencySymbol,
+                    showTopCategories: false,
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -136,7 +137,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   const SizedBox(height: 24),
                   if (provider.isLoading)
                     _DashboardSkeleton()
-                  else if (transactions.isNotEmpty)
+                  else if (transactions.isNotEmpty) ...[
                     Card(
                       elevation: 2,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -167,6 +168,15 @@ class _DashboardPageState extends State<DashboardPage> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    BudgetOverviewWidget(
+                      monthlyTransactions: transactions,
+                      allTransactions: provider.transactions,
+                      month: _selectedMonth,
+                      currencySymbol: currencySymbol,
+                      showOnlyTopCategories: true,
+                    ),
+                  ],
                   if (!provider.isLoading && transactions.isEmpty)
                     Card(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

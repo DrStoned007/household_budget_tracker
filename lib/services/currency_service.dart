@@ -6,8 +6,8 @@ class CurrencyService {
 
   static CurrencyModel getCurrent() {
     if (_box.isEmpty) {
-      // Default to INR
-      final defaultCurrency = CurrencyModel(code: 'INR', symbol: '₹');
+      // Default to MYR
+      final defaultCurrency = CurrencyModel(code: 'MYR', symbol: 'RM');
       _box.put('selected', defaultCurrency);
       return defaultCurrency;
     }

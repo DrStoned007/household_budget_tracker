@@ -154,29 +154,72 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: Padding(
+      appBar: AppBar(
+        title: const Text('Settings'),
+        backgroundColor: theme.colorScheme.primary,
+        elevation: 2,
+      ),
+      body: ListView(
         padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Currency', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<CurrencyModel>(
-              value: _selectedCurrency,
-              decoration: const InputDecoration(labelText: 'Select Currency'),
-              items: currencyOptions.map((currency) => DropdownMenuItem(
-                value: currency,
-                child: Text('${currency.symbol} ${currency.code}'),
-              )).toList(),
-              onChanged: (val) {
-                if (val != null) _changeCurrency(val);
-              },
+        children: [
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.attach_money, color: theme.colorScheme.primary),
+                      const SizedBox(width: 8),
+                      Text('Currency', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<CurrencyModel>(
+                    value: _selectedCurrency,
+                    decoration: InputDecoration(
+                      labelText: 'Select Currency',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      prefixIcon: Icon(Icons.monetization_on, color: theme.colorScheme.primary),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                    icon: const Icon(Icons.arrow_drop_down_rounded, size: 28),
+                    style: theme.textTheme.bodyLarge,
+                    dropdownColor: theme.colorScheme.surface,
+                    items: currencyOptions.map((currency) => DropdownMenuItem(
+                      value: currency,
+                      child: Row(
+                        children: [
+                          Text(currency.symbol, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 8),
+                          Text(currency.code, style: const TextStyle(fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                    )).toList(),
+                    onChanged: (val) {
+                      if (val != null) _changeCurrency(val);
+                    },
+                  ),
+                ],
+              ),
             ),
-            _buildAutomationSection(),
-          ],
-        ),
+          ),
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: _buildAutomationSection(),
+            ),
+          ),
+        ],
       ),
     );
   }

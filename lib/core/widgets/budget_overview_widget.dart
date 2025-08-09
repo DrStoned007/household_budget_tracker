@@ -13,12 +13,17 @@ class BudgetOverviewWidget extends StatelessWidget {
   final DateTime month;
   final String currencySymbol;
 
+  final bool showTopCategories;
+  final bool showOnlyTopCategories;
+
   const BudgetOverviewWidget({
     super.key,
     required this.monthlyTransactions,
     required this.allTransactions,
     required this.month,
     required this.currencySymbol,
+    this.showTopCategories = true,
+    this.showOnlyTopCategories = false,
   });
 
   @override
@@ -127,96 +132,100 @@ class BudgetOverviewWidget extends StatelessWidget {
     }
 
     Widget topCategoriesBudget() {
-      if (top.isEmpty) return const SizedBox.shrink();
-      return Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Top Categories Budget',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+  return Card(
+    elevation: 2,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    child: Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Top Categories Budget',
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          if (top.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12.0),
+              child: Text(
+                'No categories with budget set for this month.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
               ),
-              const SizedBox(height: 8),
-              ...top.map((item) {
-                final String cat = item['category'] as String;
-                final double budget = item['budget'] as double;
-                final double spent = item['spent'] as double;
-                final double progress = (item['progress'] as double).clamp(0.0, 1.0).toDouble();
-                final bool over = spent > budget;
-                final bool near = !over && progress >= kNearLimitThreshold;
+            )
+          else ...top.map((item) {
+            final String cat = item['category'] as String;
+            final double budget = item['budget'] as double;
+            final double spent = item['spent'] as double;
+            final double progress = (item['progress'] as double).clamp(0.0, 1.0).toDouble();
+            final bool over = spent > budget;
+            final bool near = !over && progress >= kNearLimitThreshold;
+            final Color color = progressColor(progress);
 
-                final Color color = progressColor(progress);
-
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              cat,
-                              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                          ),
-                          if (over)
-                            _statusChip(
-                              context,
-                              label: 'Over limit',
-                              color: Colors.red,
-                              icon: Icons.error_outline,
-                            )
-                          else if (near)
-                            _statusChip(
-                              context,
-                              label: 'Near limit',
-                              color: Colors.orange,
-                              icon: Icons.warning_amber_outlined,
-                            ),
-                        ],
+                      Expanded(
+                        child: Text(cat, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700)),
                       ),
-                      const SizedBox(height: 8),
-                      LinearProgressIndicator(
-                        value: progress,
-                        minHeight: 8,
-                        color: color,
-                        backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Text('Spent: ${currencyFmt.format(spent)}'),
-                          const SizedBox(width: 12),
-                          Text('Budget: ${currencyFmt.format(budget)}'),
-                          const Spacer(),
-                          if (over)
-                            Text(
-                              '+${currencyFmt.format(spent - budget)}',
-                              style: const TextStyle(color: Colors.red),
-                            ),
-                        ],
-                      ),
+                      if (over)
+                        _statusChip(context, label: 'Over', color: Colors.red, icon: Icons.error_outline)
+                      else if (near)
+                        _statusChip(context, label: 'Near', color: Colors.orange, icon: Icons.warning_amber_outlined),
                     ],
                   ),
-                );
-              }),
-            ],
-          ),
-        ),
+                  const SizedBox(height: 4),
+                  LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 8,
+                    color: color,
+                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Text('Spent: ${currencyFmt.format(spent)}'),
+                      const SizedBox(width: 12),
+                      Text('Budget: ${currencyFmt.format(budget)}'),
+                      const Spacer(),
+                      if (over)
+                        Text(
+                          '+${currencyFmt.format(spent - budget)}',
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    ),
+  );
+}
+
+    if (showOnlyTopCategories) {
+      return Column(
+        children: [
+          if (top.isNotEmpty) topCategoriesBudget(),
+        ],
       );
     }
-
     return Column(
       children: [
         quickBudgetSummary(),
-        if (top.isNotEmpty) const SizedBox(height: 16),
-        topCategoriesBudget(),
+        if (showTopCategories && top.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          topCategoriesBudget(),
+        ],
       ],
     );
   }

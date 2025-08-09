@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../services/transaction_service.dart';
 import '../../providers/transaction_provider.dart';
 import '../../core/constants/categories.dart';
+import '../../core/constants/category_visuals.dart';
 import '../../models/transaction_model.dart';
 import '../../core/helpers/amount_input_formatter.dart';
 import '../../core/helpers/currency_utils.dart';
@@ -23,6 +24,7 @@ class _BudgetPageState extends State<BudgetPage> {
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
   final Map<String, TextEditingController> _controllers = {};
   String _filter = '';
+  String _sortBy = 'name'; // name, spent, progress
 
   @override
   void dispose() {
@@ -55,7 +57,13 @@ class _BudgetPageState extends State<BudgetPage> {
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           inputFormatters: [AmountTextInputFormatter(maxDecimals: 2)],
           decoration: InputDecoration(
-            prefixText: '${getCurrencySymbol()} ',
+            prefixIcon: Padding(
+              padding: const EdgeInsets.only(left: 12, right: 8),
+              child: Text(
+                getCurrencySymbol(),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
             hintText: '0.00',
             border: const OutlineInputBorder(),
           ),
@@ -175,7 +183,13 @@ class _BudgetPageState extends State<BudgetPage> {
                     inputFormatters: [AmountTextInputFormatter(maxDecimals: 2)],
                     decoration: InputDecoration(
                       labelText: 'Budget amount',
-                      prefixText: '${getCurrencySymbol()} ',
+                      prefixIcon: Padding(
+                        padding: const EdgeInsets.only(left: 12, right: 8),
+                        child: Text(
+                          getCurrencySymbol(),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                      ),
                       border: const OutlineInputBorder(),
                     ),
                   ),
@@ -251,7 +265,7 @@ class _BudgetPageState extends State<BudgetPage> {
     // Filtered view
     final displayedCats = _filter.trim().isEmpty
         ? expenseCats
-        : (expenseCats.where((c) => c.toLowerCase().contains(_filter.trim().toLowerCase())).toList()..sort());
+        : (expenseCats.where((c) => c.toLowerCase().contains(_filter.trim().toLowerCase())).toList());
 
     double spentIn(String cat) {
       return provider.transactions
@@ -263,9 +277,27 @@ class _BudgetPageState extends State<BudgetPage> {
           .fold<double>(0, (s, t) => s + t.amount);
     }
 
+    // Sorting
+    displayedCats.sort((a, b) {
+      if (_sortBy == 'name') {
+        return a.compareTo(b);
+      } else if (_sortBy == 'spent') {
+        return spentIn(b).compareTo(spentIn(a));
+      } else if (_sortBy == 'progress') {
+        final aBudget = TransactionService.getMonthlyBudget(a, _month) ?? 0.0;
+        final bBudget = TransactionService.getMonthlyBudget(b, _month) ?? 0.0;
+        final aProgress = aBudget > 0 ? spentIn(a) / aBudget : 0.0;
+        final bProgress = bBudget > 0 ? spentIn(b) / bBudget : 0.0;
+        return bProgress.compareTo(aProgress);
+      }
+      return 0;
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Budgets'),
+        backgroundColor: theme.colorScheme.primary,
+        elevation: 2,
         actions: [
           TextButton.icon(
             onPressed: _pickMonth,
@@ -293,7 +325,7 @@ class _BudgetPageState extends State<BudgetPage> {
         separatorBuilder: (context, index) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           if (index == 0) {
-            // Top summary + search
+            // Top summary + search + sort
             final Map<String, double> budgets = {
               for (final cat in expenseCats) cat: (TransactionService.getMonthlyBudget(cat, _month) ?? 0.0)
             };
@@ -325,13 +357,41 @@ class _BudgetPageState extends State<BudgetPage> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    child: TextField(
-                      decoration: const InputDecoration(
-                        hintText: 'Search categories...',
-                        prefixIcon: Icon(Icons.search),
-                        border: InputBorder.none,
-                      ),
-                      onChanged: (v) => setState(() => _filter = v),
+                    child: Column(
+                      children: [
+                        TextField(
+                          decoration: const InputDecoration(
+                            hintText: 'Search categories...',
+                            prefixIcon: Icon(Icons.search),
+                            border: InputBorder.none,
+                          ),
+                          onChanged: (v) => setState(() => _filter = v),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Text('Sort by:'),
+                            const SizedBox(width: 8),
+                            ChoiceChip(
+                              label: const Text('Name'),
+                              selected: _sortBy == 'name',
+                              onSelected: (v) => setState(() => _sortBy = 'name'),
+                            ),
+                            const SizedBox(width: 4),
+                            ChoiceChip(
+                              label: const Text('Spent'),
+                              selected: _sortBy == 'spent',
+                              onSelected: (v) => setState(() => _sortBy = 'spent'),
+                            ),
+                            const SizedBox(width: 4),
+                            ChoiceChip(
+                              label: const Text('Progress'),
+                              selected: _sortBy == 'progress',
+                              onSelected: (v) => setState(() => _sortBy = 'progress'),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -365,6 +425,8 @@ class _BudgetPageState extends State<BudgetPage> {
           final spent = spentIn(cat);
           final progress = currentBudget > 0 ? (spent / currentBudget).clamp(0, 1) : 0.0;
           final over = currentBudget > 0 && spent > currentBudget;
+          final icon = categoryIcons[cat] ?? Icons.category;
+          final color = categoryColors[cat] ?? theme.colorScheme.primary;
 
           return Dismissible(
             key: ValueKey('budget_$cat'),
@@ -394,11 +456,9 @@ class _BudgetPageState extends State<BudgetPage> {
             confirmDismiss: (direction) async {
               final messenger = ScaffoldMessenger.of(context);
               if (direction == DismissDirection.startToEnd) {
-                // Open bottom sheet to set/update budget
                 _openBudgetSheet(expenseCats, preselect: cat);
                 return false;
               } else {
-                // Clear budget
                 if (currentBudget == 0) return false;
                 await TransactionService.clearMonthlyBudget(cat, _month);
                 if (!mounted) return false;
@@ -421,38 +481,24 @@ class _BudgetPageState extends State<BudgetPage> {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
+                          // Icon and color tag
+                          CircleAvatar(
+                            backgroundColor: color.withValues(alpha: 0.2),
+                            child: Icon(icon, color: color),
+                          ),
+                          const SizedBox(width: 10),
                           Expanded(
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 28,
-                                  decoration: BoxDecoration(
-                                    color: (over
-                                            ? Colors.red
-                                            : (progress >= kNearLimitThreshold
-                                                ? Colors.orange
-                                                : theme.colorScheme.primary))
-                                        .withValues(alpha: 0.3),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    cat,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                                  ),
-                                ),
-                                if (over)
-                                  _StatusChip(color: Colors.red, icon: Icons.error_outline, label: 'Over')
-                                else if (!over && progress >= kNearLimitThreshold)
-                                  _StatusChip(color: Colors.orange, icon: Icons.warning_amber_outlined, label: 'Near'),
-                              ],
+                            child: Text(
+                              cat,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
                             ),
                           ),
+                          if (over)
+                            _StatusChip(color: Colors.red, icon: Icons.error_outline, label: 'Over')
+                          else if (!over && progress >= kNearLimitThreshold)
+                            _StatusChip(color: Colors.orange, icon: Icons.warning_amber_outlined, label: 'Near'),
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -470,16 +516,23 @@ class _BudgetPageState extends State<BudgetPage> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      LinearProgressIndicator(
-                        value: progress.toDouble(),
-                        minHeight: 10,
-                        color: over
-                            ? Colors.red
-                            : (progress >= kNearLimitThreshold
-                                ? Colors.orange
-                                : theme.colorScheme.primary),
-                        backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(8),
+                      TweenAnimationBuilder<double>(
+                        tween: Tween<double>(begin: 0, end: progress.toDouble()),
+                        duration: const Duration(milliseconds: 700),
+                        curve: Curves.easeOut,
+                        builder: (context, value, child) {
+                          return LinearProgressIndicator(
+                            value: value,
+                            minHeight: 10,
+                            color: over
+                                ? Colors.red
+                                : (progress >= kNearLimitThreshold
+                                    ? Colors.orange
+                                    : theme.colorScheme.primary),
+                            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(8),
+                          );
+                        },
                       ),
                       const SizedBox(height: 8),
                       Row(
@@ -493,6 +546,7 @@ class _BudgetPageState extends State<BudgetPage> {
                               '+${currencyFmt.format(spent - currentBudget)}',
                               style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w700),
                             )
+                          // ...existing code...
                           else
                             Text(
                               '${currencyFmt.format((currentBudget - spent).clamp(0, double.infinity))} left',

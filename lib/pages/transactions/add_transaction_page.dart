@@ -440,7 +440,13 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                           TextFormField(
                             decoration: InputDecoration(
                               hintText: '0.00',
-                              prefixText: '${getCurrencySymbol()} ',
+                              prefixIcon: Padding(
+                                padding: const EdgeInsets.only(left: 12, right: 8),
+                                child: Text(
+                                  getCurrencySymbol(),
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                                ),
+                              ),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
                             ),

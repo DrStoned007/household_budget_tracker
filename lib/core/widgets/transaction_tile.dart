@@ -9,14 +9,26 @@ class TransactionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currency = getCurrencySymbol();
-    return ListTile(
-      leading: Icon(
-        transaction.type == TransactionType.income ? Icons.arrow_downward : Icons.arrow_upward,
-        color: transaction.type == TransactionType.income ? Colors.green : Colors.red,
+    final isIncome = transaction.type == TransactionType.income;
+    final color = isIncome ? Colors.green : Colors.red;
+    return Container(
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
       ),
-      title: Text(transaction.category),
-      subtitle: Text('$currency${transaction.amount.toStringAsFixed(2)} • ${transaction.type.name} • ${transaction.date.toLocal().toString().split(' ')[0]}'),
-      trailing: transaction.note != null && transaction.note!.isNotEmpty ? Text(transaction.note!) : null,
+      child: ListTile(
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
+          child: Icon(isIncome ? Icons.arrow_downward : Icons.arrow_upward, color: color),
+        ),
+        title: Text(transaction.category, style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700)),
+        subtitle: Text(
+          '$currency${transaction.amount.toStringAsFixed(2)} • ${isIncome ? 'income' : 'expense'} • ${transaction.date.toLocal().toString().split(' ')[0]}',
+        ),
+        trailing: transaction.note != null && transaction.note!.isNotEmpty ? Text(transaction.note!, overflow: TextOverflow.ellipsis) : null,
+      ),
     );
   }
 }

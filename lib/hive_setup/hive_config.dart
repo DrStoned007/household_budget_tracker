@@ -14,5 +14,8 @@ class HiveConfig {
     await Hive.openBox<TransactionModel>('transactions');
     await Hive.openBox<CategoryModel>('custom_categories');
     await Hive.openBox<CurrencyModel>('currency');
+    // Generic boxes for simple persisted data
+    await Hive.openBox<double>('budgets'); // key: 'category|YYYY-MM' -> budget amount
+    await Hive.openBox('last_used_categories'); // keys: 'income', 'expense' -> List<String>
   }
 }

@@ -8,7 +8,8 @@ plugins {
 android {
     namespace = "com.example.household_budget_tracker"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // Override NDK version to satisfy path_provider_android requirement
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

@@ -163,12 +163,12 @@ Use `Provider` or `ChangeNotifier` to manage:
 ### 8. UI Focus
 
 #### Dashboard Widgets
-- `summary_card.dart`: Displays key totals with icon and color.
-- `pie_chart_widget.dart`: Pie chart for category breakdown.
-- `month_picker_dropdown.dart`: Dropdown for month filter.
+- `summary_card.dart`: Displays totals with icon and background color  
+- `pie_chart_widget.dart`: Pie chart for category breakdown (uses `fl_chart`)  
+- `month_picker_dropdown.dart`: Dropdown for selecting the month filter  
 
 #### Transaction Widgets
-- `transaction_tile.dart`: Custom list tile per transaction.
+- `transaction_tile.dart`: Custom list tile per transaction showing title, amount, date and category.
 - `category_selector.dart`: Dropdown or chip-based category selector.
 
 ---
@@ -199,6 +199,14 @@ dev_dependencies:
   hive_generator: ^2.0.1
   build_runner: ^2.4.8
 ```
+---
+
+## Next Goals
+- [ ] Wire up dashboard with live transaction data  
+- [ ] Implement pie chart with `fl_chart`  
+- [ ] Add transaction form validation  
+- [ ] Budget planning logic & UI (monthly budget, alerts)  
+- [ ] User-editable categories  
 
 ---
 
@@ -216,6 +224,13 @@ dev_dependencies:
 ---
 
 ## Note for Developer
-This file will be continuously updated as features evolve. Stick to modular and clean architecture.
+- This file will be continuously updated as features evolve. Stick to modular and clean architecture.
+- Always run `build_runner` after changing Hive models  
+- When adding new pages, register them in the navigation routes file  
+- **UI Requirement**:  
+  - All screens must follow **modern design principles** (clean layout, intuitive navigation, consistent theme)  
+  - UI must be **responsive** across small, medium, and large devices — test on multiple screen sizes  
+  - Use Flutter’s `LayoutBuilder`, `MediaQuery`, and adaptive widgets to ensure correct scaling  
+  - Ensure color contrast, typography, and iconography remain accessible and visually appealing  
 
 If anything is unclear, refer to the sample implementation already in the code or request clarification.

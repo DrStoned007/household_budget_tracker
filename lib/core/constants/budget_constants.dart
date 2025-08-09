@@ -1,0 +1,1 @@
+const double kNearLimitThreshold = 0.8;

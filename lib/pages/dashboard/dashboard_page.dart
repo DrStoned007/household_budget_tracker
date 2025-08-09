@@ -11,6 +11,7 @@ import '../../core/widgets/transaction_tile.dart';
 import '../settings/settings_page.dart';
 import '../../core/helpers/currency_utils.dart';
 import '../budget/budget_page.dart';
+import '../../core/widgets/budget_overview_widget.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -92,6 +93,13 @@ class _DashboardPageState extends State<DashboardPage> {
                         onChanged: (date) => setState(() => _selectedMonth = date),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 16),
+                  BudgetOverviewWidget(
+                    monthlyTransactions: transactions,
+                    allTransactions: provider.transactions,
+                    month: _selectedMonth,
+                    currencySymbol: currencySymbol,
                   ),
                   const SizedBox(height: 16),
                   Row(

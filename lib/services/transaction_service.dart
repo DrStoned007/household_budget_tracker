@@ -68,4 +68,15 @@ class TransactionService {
   static Future<void> clearMonthlyBudget(String category, DateTime month) async {
     await _budgetsBox.delete(_budgetKey(category, month));
   }
+
+  // Returns true if any month has a budget set for the given category.
+  static bool hasAnyBudgetForCategory(String category) {
+    for (final key in _budgetsBox.keys) {
+      if (key is String && key.startsWith('$category|')) {
+        final val = _budgetsBox.get(key);
+        if (val != null && val > 0) return true;
+      }
+    }
+    return false;
+  }
 }

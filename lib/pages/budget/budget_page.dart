@@ -366,13 +366,6 @@ class _BudgetPageState extends State<BudgetPage> {
           final progress = currentBudget > 0 ? (spent / currentBudget).clamp(0, 1) : 0.0;
           final over = currentBudget > 0 && spent > currentBudget;
 
-          final controller = _controllers.putIfAbsent(
-            cat,
-            () => TextEditingController(
-              text: currentBudget > 0 ? currentBudget.toStringAsFixed(0) : '',
-            ),
-          );
-
           return Dismissible(
             key: ValueKey('budget_$cat'),
             background: Container(
@@ -401,23 +394,13 @@ class _BudgetPageState extends State<BudgetPage> {
             confirmDismiss: (direction) async {
               final messenger = ScaffoldMessenger.of(context);
               if (direction == DismissDirection.startToEnd) {
-                // Save
-                final raw = controller.text.trim().replaceAll(',', '');
-                final val = double.tryParse(raw);
-                if (val == null || val <= 0) {
-                  messenger.showSnackBar(const SnackBar(content: Text('Enter a valid amount')));
-                  return false;
-                }
-                await TransactionService.setMonthlyBudget(cat, _month, val);
-                if (!mounted) return false;
-                setState(() {});
-                messenger.showSnackBar(const SnackBar(content: Text('Budget saved')));
+                // Open bottom sheet to set/update budget
+                _openBudgetSheet(expenseCats, preselect: cat);
                 return false;
               } else {
-                // Clear
+                // Clear budget
                 if (currentBudget == 0) return false;
                 await TransactionService.clearMonthlyBudget(cat, _month);
-                controller.text = '';
                 if (!mounted) return false;
                 setState(() {});
                 messenger.showSnackBar(const SnackBar(content: Text('Budget cleared')));
@@ -436,55 +419,60 @@ class _BudgetPageState extends State<BudgetPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
-                            child: Text(cat, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-                          ),
-                          SizedBox(
-                            width: 120,
-                            child: TextField(
-                              controller: controller,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              inputFormatters: [AmountTextInputFormatter(maxDecimals: 2)],
-                              decoration: const InputDecoration(
-                                labelText: 'Budget',
-                                isDense: true,
-                                border: OutlineInputBorder(),
-                              ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: (over
+                                            ? Colors.red
+                                            : (progress >= kNearLimitThreshold
+                                                ? Colors.orange
+                                                : theme.colorScheme.primary))
+                                        .withValues(alpha: 0.3),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    cat,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                                  ),
+                                ),
+                                if (over)
+                                  _StatusChip(color: Colors.red, icon: Icons.error_outline, label: 'Over')
+                                else if (!over && progress >= kNearLimitThreshold)
+                                  _StatusChip(color: Colors.orange, icon: Icons.warning_amber_outlined, label: 'Near'),
+                              ],
                             ),
                           ),
                           const SizedBox(width: 8),
-                          FilledButton(
-                            onPressed: () async {
-                              final raw = controller.text.trim().replaceAll(',', '');
-                              final val = double.tryParse(raw);
-                              if (val == null || val <= 0) {
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter a valid amount')));
-                                return;
-                              }
-                              await TransactionService.setMonthlyBudget(cat, _month, val);
-                              setState(() {});
-                            },
-                            child: const Text('Save'),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              currencyFmt.format(currentBudget),
+                              style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            tooltip: 'Clear',
-                            icon: const Icon(Icons.clear),
-                            onPressed: currentBudget == 0
-                                ? null
-                                : () async {
-                                    await TransactionService.clearMonthlyBudget(cat, _month);
-                                    controller.text = '';
-                                    setState(() {});
-                                  },
-                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.chevron_right),
                         ],
                       ),
                       const SizedBox(height: 12),
                       LinearProgressIndicator(
                         value: progress.toDouble(),
-                        minHeight: 8,
+                        minHeight: 10,
                         color: over
                             ? Colors.red
                             : (progress >= kNearLimitThreshold
@@ -496,11 +484,23 @@ class _BudgetPageState extends State<BudgetPage> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Text('Spent: ${currencyFmt.format(spent)}'),
+                          _Metric(label: 'Spent', value: currencyFmt.format(spent)),
                           const SizedBox(width: 12),
-                          Text('Budget: ${currencyFmt.format(currentBudget)}'),
+                          _Metric(label: 'Budget', value: currencyFmt.format(currentBudget)),
                           const Spacer(),
-                          if (over) Text('Over by ${currencyFmt.format(spent - currentBudget)}', style: const TextStyle(color: Colors.red)),
+                          if (over)
+                            Text(
+                              '+${currencyFmt.format(spent - currentBudget)}',
+                              style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w700),
+                            )
+                          else
+                            Text(
+                              '${currencyFmt.format((currentBudget - spent).clamp(0, double.infinity))} left',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                         ],
                       ),
                     ],
@@ -593,6 +593,68 @@ class _TotalPill extends StatelessWidget {
             Text(value, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, color: color)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// Small helper widgets for card UI
+class _Metric extends StatelessWidget {
+  final String label;
+  final String value;
+  const _Metric({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '$label: ',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
+        ),
+        Text(
+          value,
+          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  final Color color;
+  final IconData icon;
+  final String label;
+  const _StatusChip({required this.color, required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(left: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }

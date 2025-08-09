@@ -10,6 +10,7 @@ import '../../core/widgets/pie_chart_widget.dart';
 import '../../core/widgets/transaction_tile.dart';
 import '../settings/settings_page.dart';
 import '../../core/helpers/currency_utils.dart';
+import '../budget/budget_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -46,6 +47,15 @@ class _DashboardPageState extends State<DashboardPage> {
           icon: const Icon(Icons.menu),
           onPressed: _openSettings,
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Budgets',
+            icon: const Icon(Icons.account_balance_wallet_outlined),
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const BudgetPage()));
+            },
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

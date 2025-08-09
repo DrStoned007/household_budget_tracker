@@ -199,16 +199,6 @@ dev_dependencies:
   hive_generator: ^2.0.1
   build_runner: ^2.4.8
 ```
----
-
-## Next Goals
-- [ ] Wire up dashboard with live transaction data  
-- [ ] Implement pie chart with `fl_chart`  
-- [ ] Add transaction form validation  
-- [ ] Budget planning logic & UI (monthly budget, alerts)  
-- [ ] User-editable categories  
-
----
 
 ## Summary of Agent Deliverables
 

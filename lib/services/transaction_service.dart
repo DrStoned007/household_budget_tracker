@@ -64,4 +64,8 @@ class TransactionService {
   static double? getMonthlyBudget(String category, DateTime month) {
     return _budgetsBox.get(_budgetKey(category, month));
   }
+
+  static Future<void> clearMonthlyBudget(String category, DateTime month) async {
+    await _budgetsBox.delete(_budgetKey(category, month));
+  }
 }

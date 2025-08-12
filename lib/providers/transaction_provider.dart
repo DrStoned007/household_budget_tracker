@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/transaction_model.dart';
-import '../services/transaction_service.dart';
+import '../services/supabase_transaction_service.dart';
+
 
 class TransactionProvider extends ChangeNotifier {
-  List<TransactionModel> _transactions = [];
+  final SupabaseTransactionService _service = SupabaseTransactionService();
   List<MapEntry<int, TransactionModel>> _transactionsWithKeys = [];
   bool _isLoading = false;
 
@@ -18,42 +19,62 @@ class TransactionProvider extends ChangeNotifier {
     loadTransactions();
   }
 
-  List<TransactionModel> get transactions => _transactions;
+  // Expose transactions as plain list for most screens
+  List<TransactionModel> get transactions => _transactionsWithKeys.map((e) => e.value).toList();
+  // Expose mapping with IDs for pages that need stable keys
   List<MapEntry<int, TransactionModel>> get transactionsWithKeys => _transactionsWithKeys;
 
   Future<void> loadTransactions() async {
     _setLoading(true);
-    _transactions = TransactionService.getAll();
-    _transactionsWithKeys = TransactionService.getAllWithKeys();
+    final data = await _service.fetchTransactions();
+    _transactionsWithKeys = data.map((tx) {
+      final id = (tx['id'] as num?)?.toInt() ?? -1;
+      return MapEntry(
+        id,
+        TransactionModel(
+          category: tx['category'],
+          amount: (tx['amount'] as num).toDouble(),
+          date: DateTime.parse(tx['date']),
+          type: tx['type'] == 'income' ? TransactionType.income : TransactionType.expense,
+          note: tx['note'],
+        ),
+      );
+    }).toList();
     notifyListeners();
     _setLoading(false);
   }
 
   Future<int> addTransaction(TransactionModel transaction) async {
     _setLoading(true);
-    final key = await TransactionService.add(transaction);
-    _transactions = TransactionService.getAll();
-    _transactionsWithKeys = TransactionService.getAllWithKeys();
-    notifyListeners();
+    final id = await _service.addTransaction({
+      'category': transaction.category,
+      'amount': transaction.amount,
+      'date': transaction.date.toIso8601String(),
+      'type': transaction.type == TransactionType.income ? 'income' : 'expense',
+      'note': transaction.note,
+    });
+    await loadTransactions();
     _setLoading(false);
-    return key;
+    return id;
   }
 
-  Future<void> deleteTransaction(int key) async {
+  Future<void> deleteTransaction(int id) async {
     _setLoading(true);
-    await TransactionService.delete(key);
-    _transactions = TransactionService.getAll();
-    _transactionsWithKeys = TransactionService.getAllWithKeys();
-    notifyListeners();
+    await _service.deleteTransaction(id);
+    await loadTransactions();
     _setLoading(false);
   }
 
-  Future<void> updateTransaction(int key, TransactionModel transaction) async {
+  Future<void> updateTransaction(int id, TransactionModel transaction) async {
     _setLoading(true);
-    await TransactionService.update(key, transaction);
-    _transactions = TransactionService.getAll();
-    _transactionsWithKeys = TransactionService.getAllWithKeys();
-    notifyListeners();
+    await _service.updateTransaction(id, {
+      'category': transaction.category,
+      'amount': transaction.amount,
+      'date': transaction.date.toIso8601String(),
+      'type': transaction.type == TransactionType.income ? 'income' : 'expense',
+      'note': transaction.note,
+    });
+    await loadTransactions();
     _setLoading(false);
   }
 }

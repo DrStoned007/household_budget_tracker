@@ -12,6 +12,7 @@ import '../settings/settings_page.dart';
 import '../../core/helpers/currency_utils.dart';
 import '../budget/budget_page.dart';
 import '../../core/widgets/budget_overview_widget.dart';
+import '../../providers/savings_provider.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -133,6 +134,40 @@ class _DashboardPageState extends State<DashboardPage> {
                     icon: Icons.account_balance_wallet,
                     color: (totalIncome - totalExpense) >= 0 ? Colors.blue : Colors.red,
                     currencySymbol: currencySymbol,
+                  ),
+                  const SizedBox(height: 12),
+                  Consumer<SavingsProvider>(
+                    builder: (context, s, _) {
+                      final monthlySaved = s.totalSavedForMonth(_selectedMonth);
+                      final totalSaved = s.totalSavedAll;
+                      return Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: SummaryCard(
+                                  label: 'Saved This Month',
+                                  value: monthlySaved,
+                                  icon: Icons.savings_outlined,
+                                  color: Colors.teal,
+                                  currencySymbol: currencySymbol,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: SummaryCard(
+                                  label: 'Total Saved',
+                                  value: totalSaved,
+                                  icon: Icons.lock_outline,
+                                  color: Colors.indigo,
+                                  currencySymbol: currencySymbol,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 24),
                   if (provider.isLoading)

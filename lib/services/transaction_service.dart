@@ -1,5 +1,10 @@
 import 'package:hive/hive.dart';
 import '../models/transaction_model.dart';
+import '../models/savings_transaction_model.dart';
+import 'savings_calculator_service.dart';
+import 'savings_goal_service.dart';
+import 'savings_settings_service.dart';
+import 'savings_transaction_service.dart';
 
 class TransactionService {
   static final Box<TransactionModel> _box = Hive.box<TransactionModel>('transactions');
@@ -25,6 +30,10 @@ class TransactionService {
   static Future<int> add(TransactionModel transaction) async {
     final key = await _box.add(transaction);
     _trackLastUsedCategory(transaction);
+    
+    // Process round-up savings
+    await _processRoundUpSavings(transaction);
+    
     return key;
   }
 
@@ -78,5 +87,45 @@ class TransactionService {
       }
     }
     return false;
+  }
+
+  // Round-up processing method
+  static Future<void> _processRoundUpSavings(TransactionModel transaction) async {
+    try {
+      final settings = SavingsSettingsService.get();
+      
+      // Check if round-up is enabled and applicable
+      if (!settings.roundUpEnabled || settings.roundUpGoalId == null) return;
+      if (settings.roundUpExpensesOnly && transaction.type != TransactionType.expense) return;
+      
+      // Calculate round-up amount
+      final roundUpAmount = SavingsCalculatorService.calculateRoundUpWithMultiplier(transaction.amount);
+      
+      if (roundUpAmount <= 0) return;
+      
+      // Create round-up savings transaction
+      final savingsTransaction = SavingsTransactionModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        goalId: settings.roundUpGoalId!,
+        amount: roundUpAmount,
+        date: transaction.date,
+        type: SavingsTransactionType.roundup,
+        sourceTransactionId: transaction.hashCode.toString(), // Simple ID reference
+        note: 'Round-up from ${transaction.category}',
+        createdAt: DateTime.now(),
+      );
+      
+      await SavingsTransactionService.add(savingsTransaction);
+      
+      // Update the goal amount
+      final goal = SavingsGoalService.getGoalById(settings.roundUpGoalId!);
+      if (goal != null) {
+        goal.currentAmount += roundUpAmount;
+        await goal.save();
+      }
+    } catch (e) {
+      // Silently handle errors to not break the main transaction flow
+      // In production, this should use proper logging
+    }
   }
 }

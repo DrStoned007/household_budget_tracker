@@ -5,6 +5,9 @@ import '../models/category_model.dart';
 import '../models/currency_model.dart';
 import '../models/recurring_transaction_model.dart';
 import '../models/automation_settings_model.dart';
+import '../models/savings_goal_model.dart';
+import '../models/savings_transaction_model.dart';
+import '../models/savings_settings_model.dart';
 
 class HiveConfig {
   static Future<void> init() async {
@@ -19,6 +22,12 @@ class HiveConfig {
     Hive.registerAdapter(RecurringTransactionModelAdapter());
     // Automation settings
     Hive.registerAdapter(AutomationSettingsAdapter());
+    
+    // Savings adapters
+    Hive.registerAdapter(SavingsGoalModelAdapter());
+    Hive.registerAdapter(SavingsTransactionTypeAdapter());
+    Hive.registerAdapter(SavingsTransactionModelAdapter());
+    Hive.registerAdapter(SavingsSettingsModelAdapter());
 
     await Hive.openBox<TransactionModel>('transactions');
     await Hive.openBox<CategoryModel>('custom_categories');
@@ -30,5 +39,10 @@ class HiveConfig {
     await Hive.openBox('last_used_categories'); // keys: 'income', 'expense' -> List<String>
     await Hive.openBox('automation_state'); // idempotency & alerts dedup
     await Hive.openBox('category_prefs'); // predefined categories prefs (hidden/renamed)
+    
+    // Savings boxes
+    await Hive.openBox<SavingsGoalModel>('savings_goals');
+    await Hive.openBox<SavingsTransactionModel>('savings_transactions');
+    await Hive.openBox<SavingsSettingsModel>('savings_settings');
   }
 }
